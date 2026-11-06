@@ -10,7 +10,14 @@ import java.util.List;
 public interface RegionDAO {
 
     List<Region> listAllRegions() throws SQLException;
+    List<Region> listRegionsPage(
+            int page,
+            int size,
+            String sortField,
+            String sortDir
+    ) throws SQLException;
 
+    Long countRegions() throws SQLException;
     void insertRegion(Region region) throws SQLException;
 
     void updateRegion(Region region) throws SQLException;

@@ -1,39 +1,49 @@
 package org.iesalixar.daw2.danielquintero
         .dwese2627_ticket_logger_webapp_dqd.daos;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Root;
+
 import org.iesalixar.daw2.danielquintero
         .dwese2627_ticket_logger_webapp_dqd.entities.Region;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.springframework.jdbc.core.BeanPropertyRowMapper;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Repository
+@Transactional
 public class RegionDAOImpl implements RegionDAO {
 
     private static final Logger logger =
             LoggerFactory.getLogger(RegionDAOImpl.class);
 
-    private final JdbcTemplate jdbcTemplate;
+    @PersistenceContext
+    private EntityManager entityManager;
 
-    public RegionDAOImpl(JdbcTemplate jdbcTemplate) {
-        this.jdbcTemplate = jdbcTemplate;
-    }
 
+    /*
+     * LISTADO COMPLETO
+     */
     @Override
     public List<Region> listAllRegions() {
 
-        String sql = "SELECT * FROM regions";
+        String query =
+                "SELECT r FROM Region r";
 
-        List<Region> regions = jdbcTemplate.query(
-                sql,
-                new BeanPropertyRowMapper<>(Region.class)
-        );
+        List<Region> regions =
+                entityManager.createQuery(
+                        query,
+                        Region.class
+                ).getResultList();
 
         logger.info(
                 "Retrieved {} regions from the database",
@@ -43,127 +53,234 @@ public class RegionDAOImpl implements RegionDAO {
         return regions;
     }
 
+
+    /*
+     * LISTADO PAGINADO Y ORDENADO
+     */
     @Override
-    public void insertRegion(Region region) {
+    public List<Region> listRegionsPage(
+            int page,
+            int size,
+            String sortField,
+            String sortDir) {
 
-        String sql =
-                "INSERT INTO regions (code, name) VALUES (?, ?)";
+        int offset =
+                page * size;
 
-        int rowsAffected = jdbcTemplate.update(
-                sql,
-                region.getCode(),
-                region.getName()
-        );
+        CriteriaBuilder cb =
+                entityManager.getCriteriaBuilder();
 
-        logger.info(
-                "Inserted region. Rows affected: {}",
-                rowsAffected
-        );
-    }
+        CriteriaQuery<Region> cq =
+                cb.createQuery(Region.class);
 
-    @Override
-    public Region getRegionById(Long id) {
+        Root<Region> root =
+                cq.from(Region.class);
 
-        String sql =
-                "SELECT * FROM regions WHERE id = ?";
+        if ("desc".equalsIgnoreCase(sortDir)) {
 
-        List<Region> regions = jdbcTemplate.query(
-                sql,
-                new BeanPropertyRowMapper<>(Region.class),
-                id
-        );
+            cq.orderBy(
+                    cb.desc(
+                            root.get(sortField)
+                    )
+            );
 
-        if (!regions.isEmpty()) {
-            return regions.getFirst();
+        } else {
+
+            cq.orderBy(
+                    cb.asc(
+                            root.get(sortField)
+                    )
+            );
         }
 
-        return null;
+        List<Region> regions =
+                entityManager
+                        .createQuery(cq)
+                        .setFirstResult(offset)
+                        .setMaxResults(size)
+                        .getResultList();
+
+        logger.info(
+                "Retrieved page {} with {} regions ordered by {} {}",
+                page,
+                regions.size(),
+                sortField,
+                sortDir
+        );
+
+        return regions;
     }
 
+
+    /*
+     * CONTAR REGIONES
+     */
     @Override
-    public void updateRegion(Region region) {
+    public Long countRegions() {
 
-        String sql =
-                "UPDATE regions SET code = ?, name = ? WHERE id = ?";
+        String query = """
+                SELECT COUNT(r)
+                FROM Region r
+                """;
 
-        int rowsAffected = jdbcTemplate.update(
-                sql,
-                region.getCode(),
-                region.getName(),
+        return entityManager
+                .createQuery(
+                        query,
+                        Long.class
+                )
+                .getSingleResult();
+    }
+
+
+    /*
+     * INSERTAR
+     */
+    @Override
+    public void insertRegion(
+            Region region) {
+
+        entityManager.persist(region);
+
+        logger.info(
+                "Inserted region with code {}",
+                region.getCode()
+        );
+    }
+
+
+    /*
+     * ACTUALIZAR
+     */
+    @Override
+    public void updateRegion(
+            Region region) {
+
+        entityManager.merge(region);
+
+        logger.info(
+                "Updated region with id {}",
                 region.getId()
         );
-
-        logger.info(
-                "Updated region. Rows affected: {}",
-                rowsAffected
-        );
     }
 
+
+    /*
+     * ELIMINAR
+     */
     @Override
-    public void deleteRegion(Long id) {
+    public void deleteRegion(
+            Long id) {
 
-        String sql =
-                "DELETE FROM regions WHERE id = ?";
+        Region region =
+                entityManager.find(
+                        Region.class,
+                        id
+                );
 
-        int rowsAffected = jdbcTemplate.update(
-                sql,
-                id
-        );
+        if (region != null) {
 
-        logger.info(
-                "Deleted region. Rows affected: {}",
-                rowsAffected
-        );
+            entityManager.remove(region);
+
+            logger.info(
+                    "Deleted region with id {}",
+                    id
+            );
+        }
     }
 
+
+    /*
+     * BUSCAR POR ID
+     */
     @Override
-    public boolean existsRegionByCode(String code) {
+    public Region getRegionById(
+            Long id) {
 
-        String sql =
-                "SELECT COUNT(*) FROM regions WHERE UPPER(code) = ?";
+        Region region =
+                entityManager.find(
+                        Region.class,
+                        id
+                );
 
-        Integer count = jdbcTemplate.queryForObject(
-                sql,
-                Integer.class,
-                code.toUpperCase()
-        );
+        if (region != null) {
 
-        boolean exists = count != null && count > 0;
+            logger.info(
+                    "Region retrieved: ID = {}, code = {}, name = {}",
+                    region.getId(),
+                    region.getCode(),
+                    region.getName()
+            );
 
-        logger.info(
-                "Region with code {} exists: {}",
-                code,
-                exists
-        );
+        } else {
 
-        return exists;
+            logger.warn(
+                    "No region found with id {}",
+                    id
+            );
+        }
+
+        return region;
     }
 
+
+    /*
+     * COMPROBAR SI EXISTE UN CÓDIGO
+     */
+    @Override
+    public boolean existsRegionByCode(
+            String code) {
+
+        String query = """
+                SELECT COUNT(r)
+                FROM Region r
+                WHERE UPPER(r.code) = :code
+                """;
+
+        Long count =
+                entityManager.createQuery(
+                                query,
+                                Long.class
+                        )
+                        .setParameter(
+                                "code",
+                                code.toUpperCase()
+                        )
+                        .getSingleResult();
+
+        return count > 0;
+    }
+
+
+    /*
+     * COMPROBAR CÓDIGO EXCLUYENDO UN ID
+     */
     @Override
     public boolean existsRegionByCodeAndNotId(
             String code,
             Long id) {
 
-        String sql =
-                "SELECT COUNT(*) FROM regions " +
-                        "WHERE UPPER(code) = ? AND id != ?";
+        String query = """
+                SELECT COUNT(r)
+                FROM Region r
+                WHERE UPPER(r.code) = :code
+                  AND r.id != :id
+                """;
 
-        Integer count = jdbcTemplate.queryForObject(
-                sql,
-                Integer.class,
-                code.toUpperCase(),
-                id
-        );
+        Long count =
+                entityManager.createQuery(
+                                query,
+                                Long.class
+                        )
+                        .setParameter(
+                                "code",
+                                code.toUpperCase()
+                        )
+                        .setParameter(
+                                "id",
+                                id
+                        )
+                        .getSingleResult();
 
-        boolean exists = count != null && count > 0;
-
-        logger.info(
-                "Region with code {} exists excluding id {}: {}",
-                code,
-                id,
-                exists
-        );
-
-        return exists;
+        return count > 0;
     }
 }

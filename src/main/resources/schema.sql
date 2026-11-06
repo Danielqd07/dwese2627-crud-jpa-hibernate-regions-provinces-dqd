@@ -15,3 +15,4 @@ CREATE TABLE IF NOT EXISTS provinces (
     region_id INT NOT NULL,
     FOREIGN KEY (region_id) REFERENCES regions(id)
 );
+

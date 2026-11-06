@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 
-<head th:replace="fragments/head :: head ('Ticket Logger - Formulario')"></head>
+<head th:replace="fragments/head :: head ('Ticket Logger - Comunidades Autónomas')"></head>
 
 <body class="d-flex flex-column h-100">
 
@@ -11,9 +11,9 @@
 
     <div class="form-card">
 
-        <h1 th:text="${region.id == null}
-                ? #{msg.region.form.addTitle}
-                : #{msg.region.form.editTitle}">
+        <h1 th:text="${isEdit}
+                ? #{msg.region-form.edit}
+                : #{msg.region-form.add}">
         </h1>
 
         <div th:if="${errorMessage}"
@@ -21,18 +21,24 @@
              th:text="${errorMessage}">
         </div>
 
-        <form th:action="${region.id == null} ? @{/regions/insert} : @{/regions/update}"
+        <form th:action="${isEdit}
+                ? @{/regions/update}
+                : @{/regions/insert}"
               th:object="${region}"
               method="post"
               class="mt-3">
 
-            <input type="hidden" th:field="*{id}" />
+            <!-- El ID solo existe en RegionUpdateDTO -->
+            <div th:if="${isEdit}">
+                <input type="hidden"
+                       th:field="*{id}" />
+            </div>
 
             <div class="mb-3">
 
                 <label for="code"
                        class="form-label"
-                       th:text="#{msg.region.form.code}">
+                       th:text="#{msg.region-form.code}">
                 </label>
 
                 <input type="text"
@@ -51,7 +57,7 @@
 
                 <label for="name"
                        class="form-label"
-                       th:text="#{msg.region.form.name}">
+                       th:text="#{msg.region-form.name}">
                 </label>
 
                 <input type="text"
@@ -68,14 +74,14 @@
 
             <button type="submit"
                     class="btn btn-primary"
-                    th:text="${region.id == null}
-                            ? #{msg.region.form.create}
-                            : #{msg.region.form.update}">
+                    th:text="${isEdit}
+                            ? #{msg.region-form.update}
+                            : #{msg.region-form.create}">
             </button>
 
             <a th:href="@{/regions}"
                class="btn btn-secondary"
-               th:text="#{msg.region.form.back}">
+               th:text="#{msg.region-form.returnback}">
             </a>
 
         </form>

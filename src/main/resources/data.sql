@@ -75,3 +75,4 @@ INSERT IGNORE INTO provinces (code, name, region_id) VALUES
 ('50', 'Zaragoza', 2),
 ('51', 'Ceuta', 18),
 ('52', 'Melilla', 18);
+

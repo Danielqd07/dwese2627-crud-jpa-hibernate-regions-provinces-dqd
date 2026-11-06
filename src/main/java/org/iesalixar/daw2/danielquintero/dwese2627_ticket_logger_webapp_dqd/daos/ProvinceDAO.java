@@ -3,13 +3,20 @@ package org.iesalixar.daw2.danielquintero
 
 import org.iesalixar.daw2.danielquintero
         .dwese2627_ticket_logger_webapp_dqd.entities.Province;
-
+import java.sql.SQLException;
 import java.util.List;
 
 public interface ProvinceDAO {
 
     List<Province> listAllProvinces();
+    List<Province> listProvincesPage(
+            int page,
+            int size,
+            String sortField,
+            String sortDir
+    ) throws SQLException;
 
+    Long countProvinces() throws SQLException;
     void insertProvince(Province province);
 
     void updateProvince(Province province);

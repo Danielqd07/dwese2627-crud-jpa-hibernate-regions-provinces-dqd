@@ -1,68 +1,46 @@
 package org.iesalixar.daw2.danielquintero
         .dwese2627_ticket_logger_webapp_dqd.daos;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Root;
 import org.iesalixar.daw2.danielquintero
         .dwese2627_ticket_logger_webapp_dqd.entities.Province;
-import org.iesalixar.daw2.danielquintero
-        .dwese2627_ticket_logger_webapp_dqd.entities.Region;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.RowMapper;
+
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Repository
+@Transactional
 public class ProvinceDAOImpl implements ProvinceDAO {
 
     private static final Logger logger =
             LoggerFactory.getLogger(ProvinceDAOImpl.class);
 
-    private final JdbcTemplate jdbcTemplate;
-
-    public ProvinceDAOImpl(JdbcTemplate jdbcTemplate) {
-        this.jdbcTemplate = jdbcTemplate;
-    }
-
-    private final RowMapper<Province> provinceRowMapper =
-            (rs, rowNum) -> {
-
-                Province province = new Province();
-
-                province.setId(rs.getLong("id"));
-                province.setCode(rs.getString("code"));
-                province.setName(rs.getString("name"));
-
-                Region region = new Region();
-
-                region.setId(rs.getLong("region_id"));
-                region.setCode(rs.getString("region_code"));
-                region.setName(rs.getString("region_name"));
-
-                province.setRegion(region);
-
-                return province;
-            };
+    @PersistenceContext
+    private EntityManager entityManager;
 
     @Override
     public List<Province> listAllProvinces() {
 
-        String sql = """
-                SELECT p.id,
-                       p.code,
-                       p.name,
-                       r.id AS region_id,
-                       r.code AS region_code,
-                       r.name AS region_name
-                FROM provinces p
-                INNER JOIN regions r
-                    ON p.region_id = r.id
+        String query = """
+                SELECT p
+                FROM Province p
+                JOIN FETCH p.region
                 """;
 
         List<Province> provinces =
-                jdbcTemplate.query(sql, provinceRowMapper);
+                entityManager.createQuery(
+                        query,
+                        Province.class
+                ).getResultList();
 
         logger.info(
                 "Retrieved {} provinces from the database",
@@ -73,54 +51,28 @@ public class ProvinceDAOImpl implements ProvinceDAO {
     }
 
     @Override
-    public void insertProvince(Province province) {
+    public void insertProvince(
+            Province province) {
 
-        String sql = """
-                INSERT INTO provinces (code, name, region_id)
-                VALUES (?, ?, ?)
-                """;
-
-        int rowsAffected = jdbcTemplate.update(
-                sql,
-                province.getCode(),
-                province.getName(),
-                province.getRegion() != null
-                        ? province.getRegion().getId()
-                        : null
-        );
+        entityManager.persist(province);
 
         logger.info(
-                "Inserted province. Rows affected: {}",
-                rowsAffected
+                "Inserted province with code {}",
+                province.getCode()
         );
     }
 
     @Override
-    public Province getProvinceById(Long id) {
+    public Province getProvinceById(
+            Long id) {
 
-        String sql = """
-                SELECT p.id,
-                       p.code,
-                       p.name,
-                       r.id AS region_id,
-                       r.code AS region_code,
-                       r.name AS region_name
-                FROM provinces p
-                INNER JOIN regions r
-                    ON p.region_id = r.id
-                WHERE p.id = ?
-                """;
-
-        List<Province> provinces =
-                jdbcTemplate.query(
-                        sql,
-                        provinceRowMapper,
+        Province province =
+                entityManager.find(
+                        Province.class,
                         id
                 );
 
-        if (!provinces.isEmpty()) {
-
-            Province province = provinces.getFirst();
+        if (province != null) {
 
             logger.info(
                     "Province retrieved: ID = {}, code = {}, name = {}",
@@ -129,60 +81,72 @@ public class ProvinceDAOImpl implements ProvinceDAO {
                     province.getName()
             );
 
-            return province;
+        } else {
+
+            logger.warn(
+                    "No province found with id {}",
+                    id
+            );
         }
 
-        logger.warn(
-                "No province found with id: {}",
-                id
-        );
-
-        return null;
+        return province;
     }
 
     @Override
-    public void updateProvince(Province province) {
+    public void updateProvince(
+            Province province) {
 
-        String sql = """
-                UPDATE provinces
-                SET code = ?,
-                    name = ?,
-                    region_id = ?
-                WHERE id = ?
-                """;
-
-        int rowsAffected = jdbcTemplate.update(
-                sql,
-                province.getCode(),
-                province.getName(),
-                province.getRegion() != null
-                        ? province.getRegion().getId()
-                        : null,
-                province.getId()
-        );
+        entityManager.merge(province);
 
         logger.info(
-                "Updated province. Rows affected: {}",
-                rowsAffected
+                "Updated province with id {}",
+                province.getId()
         );
     }
 
     @Override
-    public boolean existsProvinceByCode(String code) {
+    public void deleteProvince(
+            Long id) {
 
-        String sql = """
-                SELECT COUNT(*)
-                FROM provinces
-                WHERE UPPER(code) = UPPER(?)
+        Province province =
+                entityManager.find(
+                        Province.class,
+                        id
+                );
+
+        if (province != null) {
+
+            entityManager.remove(province);
+
+            logger.info(
+                    "Deleted province with id {}",
+                    id
+            );
+        }
+    }
+
+    @Override
+    public boolean existsProvinceByCode(
+            String code) {
+
+        String query = """
+                SELECT COUNT(p)
+                FROM Province p
+                WHERE UPPER(p.code) = :code
                 """;
 
-        Integer count = jdbcTemplate.queryForObject(
-                sql,
-                Integer.class,
-                code
-        );
+        Long count =
+                entityManager.createQuery(
+                                query,
+                                Long.class
+                        )
+                        .setParameter(
+                                "code",
+                                code.toUpperCase()
+                        )
+                        .getSingleResult();
 
-        return count != null && count > 0;
+        return count > 0;
     }
 
     @Override
@@ -190,38 +154,106 @@ public class ProvinceDAOImpl implements ProvinceDAO {
             String code,
             Long id) {
 
-        String sql = """
-                SELECT COUNT(*)
-                FROM provinces
-                WHERE UPPER(code) = UPPER(?)
-                  AND id != ?
+        String query = """
+                SELECT COUNT(p)
+                FROM Province p
+                WHERE UPPER(p.code) = :code
+                  AND p.id != :id
                 """;
 
-        Integer count = jdbcTemplate.queryForObject(
-                sql,
-                Integer.class,
-                code,
-                id
-        );
+        Long count =
+                entityManager.createQuery(
+                                query,
+                                Long.class
+                        )
+                        .setParameter(
+                                "code",
+                                code.toUpperCase()
+                        )
+                        .setParameter(
+                                "id",
+                                id
+                        )
+                        .getSingleResult();
 
-        return count != null && count > 0;
+        return count > 0;
     }
     @Override
-    public void deleteProvince(Long id) {
+    public List<Province> listProvincesPage(
+            int page,
+            int size,
+            String sortField,
+            String sortDir) {
 
-        String sql = """
-            DELETE FROM provinces
-            WHERE id = ?
+        int offset = page * size;
+
+        CriteriaBuilder cb =
+                entityManager.getCriteriaBuilder();
+
+        CriteriaQuery<Province> cq =
+                cb.createQuery(Province.class);
+
+        Root<Province> root =
+                cq.from(Province.class);
+
+        root.fetch("region");
+
+        String validSortField;
+
+        switch (sortField) {
+
+            case "id":
+                validSortField = "id";
+                break;
+
+            case "code":
+                validSortField = "code";
+                break;
+
+            case "name":
+                validSortField = "name";
+                break;
+
+            default:
+                validSortField = "id";
+                break;
+        }
+
+        if ("desc".equalsIgnoreCase(sortDir)) {
+
+            cq.orderBy(
+                    cb.desc(
+                            root.get(validSortField)
+                    )
+            );
+
+        } else {
+
+            cq.orderBy(
+                    cb.asc(
+                            root.get(validSortField)
+                    )
+            );
+        }
+
+        return entityManager
+                .createQuery(cq)
+                .setFirstResult(offset)
+                .setMaxResults(size)
+                .getResultList();
+    }
+
+
+    @Override
+    public Long countProvinces() {
+
+        String query = """
+            SELECT COUNT(p)
+            FROM Province p
             """;
 
-        int rowsAffected = jdbcTemplate.update(
-                sql,
-                id
-        );
-
-        logger.info(
-                "Deleted province. Rows affected: {}",
-                rowsAffected
-        );
+        return entityManager
+                .createQuery(query, Long.class)
+                .getSingleResult();
     }
 }
