@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head th:replace="fragments/head :: head ('Ticket Logger - Comunidades Autónomas')"></head>
+
+<body class="d-flex flex-column h-100">
+
+<header th:replace="fragments/header :: header"></header>
+
+<main class="form-page">
+
+    <div class="form-card">
+
+        <h1 th:text="${isEdit}
+                ? #{msg.region-form.edit}
+                : #{msg.region-form.add}">
+        </h1>
+
+        <div th:if="${errorMessage}"
+             class="alert alert-danger"
+             th:text="${errorMessage}">
+        </div>
+
+        <form th:action="${isEdit}
+                ? @{/regions/update}
+                : @{/regions/insert}"
+              th:object="${region}"
+              method="post"
+              class="mt-3">
+
+            <!-- El ID solo existe en RegionUpdateDTO -->
+            <div th:if="${isEdit}">
+                <input type="hidden"
+                       th:field="*{id}" />
+            </div>
+
+            <div class="mb-3">
+
+                <label for="code"
+                       class="form-label"
+                       th:text="#{msg.region-form.code}">
+                </label>
+
+                <input type="text"
+                       th:field="*{code}"
+                       id="code"
+                       class="form-control" />
+
+                <div th:if="${#fields.hasErrors('code')}"
+                     class="text-danger"
+                     th:errors="*{code}">
+                </div>
+
+            </div>
+
+            <div class="mb-3">
+
+                <label for="name"
+                       class="form-label"
+                       th:text="#{msg.region-form.name}">
+                </label>
+
+                <input type="text"
+                       th:field="*{name}"
+                       id="name"
+                       class="form-control" />
+
+                <div th:if="${#fields.hasErrors('name')}"
+                     class="text-danger"
+                     th:errors="*{name}">
+                </div>
+
+            </div>
+
+            <button type="submit"
+                    class="btn btn-primary"
+                    th:text="${isEdit}
+                            ? #{msg.region-form.update}
+                            : #{msg.region-form.create}">
+            </button>
+
+            <a th:href="@{/regions}"
+               class="btn btn-secondary"
+               th:text="#{msg.region-form.returnback}">
+            </a>
+
+        </form>
+
+    </div>
+
+</main>
+
+<footer th:replace="fragments/footer :: footer"></footer>
+
+<div th:replace="fragments/scripts :: scripts"></div>
+
+</body>
+</html>

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head th:replace="fragments/head :: head ('Ticket Logger - Detalle de Comunidad Autónoma')"></head>
+
+<body class="d-flex flex-column h-100">
+
+<header th:replace="fragments/header :: header"></header>
+
+<main class="list-page">
+
+    <div class="list-card">
+
+        <h1 th:text="#{msg.region-detail.title}"></h1>
+
+        <!-- Datos de la región -->
+        <h2 class="mt-4"
+            th:text="#{msg.region-detail.section.regionData}">
+        </h2>
+
+        <table class="table table-bordered mt-3">
+
+            <tbody>
+
+            <tr>
+                <th th:text="#{msg.region-detail.field.id}"></th>
+                <td th:text="${region.id}"></td>
+            </tr>
+
+            <tr>
+                <th th:text="#{msg.region-detail.field.code}"></th>
+                <td th:text="${region.code}"></td>
+            </tr>
+
+            <tr>
+                <th th:text="#{msg.region-detail.field.name}"></th>
+                <td th:text="${region.name}"></td>
+            </tr>
+
+            </tbody>
+
+        </table>
+
+
+        <!-- Provincias de la región -->
+        <h2 class="mt-4"
+            th:text="#{msg.region-detail.section.provinces}">
+        </h2>
+
+        <div class="table-responsive"
+             th:if="${region.provinces != null and !region.provinces.isEmpty()}">
+
+            <table class="table table-bordered table-striped mt-3">
+
+                <thead>
+                <tr>
+                    <th th:text="#{msg.region-detail.provinces.col.id}"></th>
+                    <th th:text="#{msg.region-detail.provinces.col.code}"></th>
+                    <th th:text="#{msg.region-detail.provinces.col.name}"></th>
+                </tr>
+                </thead>
+
+                <tbody>
+
+                <tr th:each="province : ${region.provinces}">
+
+                    <td th:text="${province.id}"></td>
+
+                    <td th:text="${province.code}"></td>
+
+                    <td th:text="${province.name}"></td>
+
+                </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+        <div th:if="${region.provinces == null or region.provinces.isEmpty()}"
+             class="alert alert-info mt-3"
+             th:text="#{msg.region-detail.provinces.empty}">
+        </div>
+
+        <a th:href="@{/regions}"
+           class="btn btn-secondary mt-3"
+           th:text="#{msg.region-detail.action.back}">
+        </a>
+
+    </div>
+
+</main>
+
+<footer th:replace="fragments/footer :: footer"></footer>
+
+<div th:replace="fragments/scripts :: scripts"></div>
+
+</body>
+</html>
